@@ -2,3 +2,10 @@ nvme-reqtool/backend/__pycache__
 nvme-reqtool/backend/routers/__pycache__
 nvme-reqtool/backend/venv
 nvme-reqtool/frontend/node_modules
+
+# Translation temp files
+.chunk_*.tmp
+checkpoint.json
+
+# PDF specs
+*.pdf
