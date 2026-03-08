@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import type { Requirement, RequirementUpdate } from '../types'
@@ -6,6 +7,8 @@ const API = '/api/requirements'
 
 interface Filters {
   category?: string
+  level1?: string
+  level2?: string
   status?: string
   support_status?: string
   keyword?: string
@@ -13,17 +16,61 @@ interface Filters {
   derived_from?: string
 }
 
-export function useRequirements(filters: Filters = {}) {
+/** 전체 데이터를 한 번만 fetch (staleTime 길게) */
+function useAllRequirements() {
   return useQuery<Requirement[]>({
-    queryKey: ['requirements', filters],
+    queryKey: ['requirements'],
     queryFn: async () => {
-      const params = Object.fromEntries(
-        Object.entries(filters).filter(([, v]) => v),
-      )
-      const { data } = await axios.get(API, { params })
+      const { data } = await axios.get(API)
       return data
     },
+    staleTime: 30_000,
   })
+}
+
+/** 클라이언트 사이드 필터링 */
+export function useRequirements(filters: Filters = {}) {
+  const { data: all = [], isLoading, error } = useAllRequirements()
+
+  const filtered = useMemo(() => {
+    let result = all
+    if (filters.category) {
+      result = result.filter((r) => r.category === filters.category)
+    }
+    if (filters.level1) {
+      result = result.filter((r) => r.level1 === filters.level1)
+    }
+    if (filters.level2) {
+      result = result.filter((r) => r.level2 === filters.level2)
+    }
+    if (filters.status) {
+      result = result.filter((r) => r.status === filters.status)
+    }
+    if (filters.support_status) {
+      result = result.filter((r) => r.support_status === filters.support_status)
+    }
+    if (filters.assigned_to) {
+      result = result.filter((r) => r.assigned_to === filters.assigned_to)
+    }
+    if (filters.derived_from) {
+      const q = filters.derived_from.toLowerCase()
+      result = result.filter((r) => r.derived_from?.toLowerCase().includes(q))
+    }
+    if (filters.keyword) {
+      const q = filters.keyword.toLowerCase()
+      result = result.filter(
+        (r) =>
+          r.id.toLowerCase().includes(q) ||
+          r.spec_text.toLowerCase().includes(q) ||
+          r.spec_text_ko?.toLowerCase().includes(q) ||
+          r.keyword?.toLowerCase().includes(q) ||
+          r.derived_from?.toLowerCase().includes(q),
+      )
+    }
+    return result
+  }, [all, filters.category, filters.level1, filters.level2, filters.status, filters.support_status, filters.assigned_to, filters.derived_from, filters.keyword])
+
+  return { data: filtered, isLoading, error }
 }
 
 export function useRequirement(id: string) {

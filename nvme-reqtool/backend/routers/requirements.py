@@ -27,47 +27,27 @@ def _to_read(req) -> RequirementRead:
     )
 
 
-@router.get("", response_model=list[RequirementRead])
-async def list_requirements(
-    category: Optional[str] = Query(None),
-    status: Optional[str] = Query(None),
-    support_status: Optional[str] = Query(None),
-    keyword: Optional[str] = Query(None),
-    assigned_to: Optional[str] = Query(None),
-    derived_from: Optional[str] = Query(None),
-    db: AsyncSession = Depends(get_db),
-):
-    reqs = await get_requirements(db, category, status, support_status, keyword, assigned_to, derived_from)
-    return [_to_read(r) for r in reqs]
+# ── 고정 경로를 먼저 정의 (/{req_id} 보다 위에) ──
 
-
-@router.get("/{req_id}", response_model=RequirementRead)
-async def read_requirement(req_id: str, db: AsyncSession = Depends(get_db)):
-    req = await get_requirement(db, req_id)
-    if not req:
-        raise HTTPException(404, "Requirement not found")
-    return _to_read(req)
-
-
-@router.post("", response_model=RequirementRead, status_code=201)
-async def create(data: RequirementCreate, db: AsyncSession = Depends(get_db)):
-    req = await create_requirement(db, data)
-    return _to_read(req)
-
-
-@router.patch("/{req_id}", response_model=RequirementRead)
-async def patch(req_id: str, data: RequirementUpdate, db: AsyncSession = Depends(get_db)):
-    req = await update_requirement(db, req_id, data)
-    if not req:
-        raise HTTPException(404, "Requirement not found")
-    return _to_read(req)
-
-
-@router.delete("/{req_id}", status_code=204)
-async def remove(req_id: str, db: AsyncSession = Depends(get_db)):
-    ok = await delete_requirement(db, req_id)
-    if not ok:
-        raise HTTPException(404, "Requirement not found")
+@router.get("/export", response_model=None)
+async def export_csv(db: AsyncSession = Depends(get_db)):
+    reqs = await get_requirements(db)
+    output = io.StringIO()
+    fields = [
+        "id", "category", "level1", "level2", "derived_from", "spec_section", "spec_text", "spec_text_ko",
+        "keyword", "controller_type", "mandatory", "support_status", "support_note",
+        "fw_version", "status", "priority", "assigned_to",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fields)
+    writer.writeheader()
+    for r in reqs:
+        writer.writerow({f: getattr(r, f) for f in fields})
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=requirements_export.csv"},
+    )
 
 
 @router.post("/import", status_code=201)
@@ -80,6 +60,7 @@ async def import_csv(file: UploadFile = File(...), db: AsyncSession = Depends(ge
             id=row["id"],
             category=row.get("category", ""),
             level1=row.get("level1", ""),
+            level2=row.get("level2"),
             derived_from=row.get("derived_from"),
             spec_section=row.get("spec_section"),
             spec_text=row.get("spec_text", ""),
@@ -98,22 +79,46 @@ async def import_csv(file: UploadFile = File(...), db: AsyncSession = Depends(ge
     return {"imported": count}
 
 
-@router.get("/export", response_model=None)
-async def export_csv(db: AsyncSession = Depends(get_db)):
-    reqs = await get_requirements(db)
-    output = io.StringIO()
-    fields = [
-        "id", "category", "level1", "derived_from", "spec_section", "spec_text", "spec_text_ko",
-        "keyword", "controller_type", "mandatory", "support_status", "support_note",
-        "fw_version", "status", "priority", "assigned_to",
-    ]
-    writer = csv.DictWriter(output, fieldnames=fields)
-    writer.writeheader()
-    for r in reqs:
-        writer.writerow({f: getattr(r, f) for f in fields})
-    output.seek(0)
-    return StreamingResponse(
-        iter([output.getvalue()]),
-        media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=requirements_export.csv"},
-    )
+# ── 목록 / CRUD ──
+
+@router.get("", response_model=list[RequirementRead])
+async def list_requirements(
+    category: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    support_status: Optional[str] = Query(None),
+    keyword: Optional[str] = Query(None),
+    assigned_to: Optional[str] = Query(None),
+    derived_from: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db),
+):
+    reqs = await get_requirements(db, category, status, support_status, keyword, assigned_to, derived_from)
+    return [_to_read(r) for r in reqs]
+
+
+@router.post("", response_model=RequirementRead, status_code=201)
+async def create(data: RequirementCreate, db: AsyncSession = Depends(get_db)):
+    req = await create_requirement(db, data)
+    return _to_read(req)
+
+
+@router.get("/{req_id}", response_model=RequirementRead)
+async def read_requirement(req_id: str, db: AsyncSession = Depends(get_db)):
+    req = await get_requirement(db, req_id)
+    if not req:
+        raise HTTPException(404, "Requirement not found")
+    return _to_read(req)
+
+
+@router.patch("/{req_id}", response_model=RequirementRead)
+async def patch(req_id: str, data: RequirementUpdate, db: AsyncSession = Depends(get_db)):
+    req = await update_requirement(db, req_id, data)
+    if not req:
+        raise HTTPException(404, "Requirement not found")
+    return _to_read(req)
+
+
+@router.delete("/{req_id}", status_code=204)
+async def remove(req_id: str, db: AsyncSession = Depends(get_db)):
+    ok = await delete_requirement(db, req_id)
+    if not ok:
+        raise HTTPException(404, "Requirement not found")

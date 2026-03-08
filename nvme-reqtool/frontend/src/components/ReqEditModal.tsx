@@ -98,21 +98,29 @@ export default function ReqEditModal({ reqId, onClose, onSendWs }: Props) {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3 text-sm">
+          <div className="grid grid-cols-3 gap-3 text-sm">
             <div>
-              <span className="text-gray-500">출처 (Derived From):</span>{' '}
+              <span className="text-gray-500">Level 1:</span>{' '}
+              <span className="font-medium">{req.level1 || '-'}</span>
+            </div>
+            <div>
+              <span className="text-gray-500">Level 2:</span>{' '}
+              <span className="font-medium">{req.level2 || '-'}</span>
+            </div>
+            <div>
+              <span className="text-gray-500">Derived From:</span>{' '}
               <span className="font-medium font-mono text-blue-700">{req.derived_from || '-'}</span>
             </div>
             <div>
-              <span className="text-gray-500">Spec 섹션:</span>{' '}
+              <span className="text-gray-500">Spec Section:</span>{' '}
               <span className="font-medium">{req.spec_section || '-'}</span>
             </div>
             <div>
-              <span className="text-gray-500">컨트롤러 타입:</span>{' '}
+              <span className="text-gray-500">Controller Type:</span>{' '}
               <span className="font-medium">{req.controller_type || '-'}</span>
             </div>
             <div>
-              <span className="text-gray-500">필수 여부:</span>{' '}
+              <span className="text-gray-500">Mandatory:</span>{' '}
               <span className="font-medium">{req.mandatory || '-'}</span>
             </div>
           </div>

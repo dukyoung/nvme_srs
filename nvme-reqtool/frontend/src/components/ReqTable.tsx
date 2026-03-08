@@ -63,8 +63,8 @@ export default function ReqTable({ data, onRowClick, editors }: Props) {
       },
       {
         accessorKey: 'category',
-        header: '분류',
-        size: 100,
+        header: 'Category',
+        size: 80,
         cell: ({ getValue }) => {
           const cat = getValue() as string
           return (
@@ -75,8 +75,24 @@ export default function ReqTable({ data, onRowClick, editors }: Props) {
         },
       },
       {
+        accessorKey: 'level1',
+        header: 'Level 1',
+        size: 120,
+        cell: ({ getValue }) => (
+          <span className="text-xs text-gray-700">{(getValue() as string) || '-'}</span>
+        ),
+      },
+      {
+        accessorKey: 'level2',
+        header: 'Level 2',
+        size: 120,
+        cell: ({ getValue }) => (
+          <span className="text-xs text-gray-500">{(getValue() as string | null) || '-'}</span>
+        ),
+      },
+      {
         accessorKey: 'derived_from',
-        header: '출처',
+        header: 'Derived From',
         size: 140,
         cell: ({ getValue }) => {
           const val = getValue() as string | null
@@ -86,14 +102,16 @@ export default function ReqTable({ data, onRowClick, editors }: Props) {
         },
       },
       {
-        accessorKey: 'spec_text',
+        id: 'spec_summary',
         header: 'Spec 요약',
-        size: 300,
-        cell: ({ getValue }) => {
-          const text = getValue() as string
+        size: 99999,
+        cell: ({ row }) => {
+          const ko = row.original.spec_text_ko
+          const en = row.original.spec_text
+          const text = ko || en
           return (
-            <span className="text-sm" title={text}>
-              {text.length > 80 ? text.slice(0, 80) + '...' : text}
+            <span className="text-sm block truncate" title={en}>
+              {text}
             </span>
           )
         },
@@ -185,7 +203,7 @@ export default function ReqTable({ data, onRowClick, editors }: Props) {
 
   return (
     <div className="overflow-x-auto border rounded-lg">
-      <table className="w-full text-sm">
+      <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
         <thead className="bg-gray-100">
           {table.getHeaderGroups().map((hg) => (
             <tr key={hg.id}>
@@ -219,7 +237,7 @@ export default function ReqTable({ data, onRowClick, editors }: Props) {
                 }`}
               >
                 {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="px-3 py-2">
+                  <td key={cell.id} className="px-3 py-2 overflow-hidden text-ellipsis whitespace-nowrap">
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}

@@ -10,6 +10,7 @@ class RequirementBase(BaseModel):
     id: str
     category: str
     level1: str
+    level2: Optional[str] = None
     derived_from: Optional[str] = None
     spec_section: Optional[str] = None
     spec_text: str
@@ -32,6 +33,7 @@ class RequirementCreate(RequirementBase):
 class RequirementUpdate(BaseModel):
     category: Optional[str] = None
     level1: Optional[str] = None
+    level2: Optional[str] = None
     derived_from: Optional[str] = None
     spec_section: Optional[str] = None
     spec_text: Optional[str] = None

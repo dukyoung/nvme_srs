@@ -16,8 +16,9 @@ class Requirement(Base):
 
     id = Column(Text, primary_key=True)
     category = Column(Text, nullable=False)      # IDENT / QUEUE / DATA_IO / NS_MGMT / MONITOR / POWER / SECURITY / INTEGRITY / FW_MGMT / VIRT
-    level1 = Column(Text, nullable=False)         # 소분류명 (예: "1.1 컨트롤러 초기화 및 속성 설정")
-    derived_from = Column(Text)                   # 출처 (예: "NVMe 2.2 §5.1.1", "NVMe 2.2 §3.5 CC.EN")
+    level1 = Column(Text, nullable=False)         # 소분류 (예: "CTRL Controller Model & Type")
+    level2 = Column(Text)                         # 세부분류 (예: "Static/Dynamic Model")
+    derived_from = Column(Text)                   # 출처 (예: "NVMe 2.2 §5.1.1")
     spec_section = Column(Text)
     spec_text = Column(Text, nullable=False)
     spec_text_ko = Column(Text)

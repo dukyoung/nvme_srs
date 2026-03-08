@@ -1,0 +1,147 @@
+"""Insert POWER requirements into DB."""
+import sqlite3, datetime
+now = datetime.datetime.now(datetime.UTC).isoformat()
+c = sqlite3.connect("nvme_req.db")
+
+reqs = [
+    # === PWR Power State Transition ===
+    {"id":"REQ-PWR-PWR-001","level1":"PWR Power State Transition","level2":None,
+     "derived_from":"NVMe 2.2 §8.1.17","spec_section":"§8.1.17",
+     "spec_text":"The controller shall support at least one power state (power state 0). Power states shall be contiguously numbered starting with zero, where each subsequent power state consumes less than or equal to the maximum power of the previous power state.",
+     "spec_text_ko":"컨트롤러는 최소 하나의 전원 상태(power state 0)를 지원해야 한다. 전원 상태는 0부터 연속적으로 번호가 매겨져야 하며, 각 후속 전원 상태는 이전 전원 상태의 최대 전력 이하를 소비해야 한다.",
+     "keyword":"Power State 0 contiguous numbering max power","mandatory":"M"},
+    {"id":"REQ-PWR-PWR-002","level1":"PWR Power State Transition","level2":None,
+     "derived_from":"NVMe 2.2 §5.1.25.1.2","spec_section":"§5.1.25.1.2",
+     "spec_text":"The Power Management feature (Feature 02h) shall allow the host to configure the power state. Upon successful completion of a Set Features command specifying the Power Management feature, the controller shall be in the specified Power State.",
+     "spec_text_ko":"Power Management 기능(Feature 02h)은 호스트가 전원 상태를 구성할 수 있어야 한다. Power Management 기능을 지정하는 Set Features 명령이 성공적으로 완료되면, 컨트롤러는 지정된 Power State에 있어야 한다.",
+     "keyword":"Power Management Feature 02h Set Features power state","mandatory":"M"},
+    {"id":"REQ-PWR-PWR-003","level1":"PWR Power State Transition","level2":None,
+     "derived_from":"NVMe 2.2 §5.1.25.1.2","spec_section":"§5.1.25.1.2",
+     "spec_text":"If the Power State field in the Set Features command specifies an unsupported power state, the controller shall abort the command with a status code of Invalid Field in Command.",
+     "spec_text_ko":"Set Features 명령의 Power State 필드가 지원되지 않는 전원 상태를 지정하면, 컨트롤러는 Invalid Field in Command 상태 코드로 명령을 중단해야 한다.",
+     "keyword":"Power State unsupported Invalid Field abort","mandatory":"M"},
+    {"id":"REQ-PWR-PWR-004","level1":"PWR Power State Transition","level2":None,
+     "derived_from":"NVMe 2.2 §8.1.17","spec_section":"§8.1.17",
+     "spec_text":"The Power State Descriptor shall report Entry Latency (ENLAT), Exit Latency (EXLAT), Relative Read Throughput (RRT), Relative Read Latency (RRL), Relative Write Throughput (RWT), and Relative Write Latency (RWL). RRT, RRL, RWT, and RWL values shall be less than the number of supported power states.",
+     "spec_text_ko":"Power State Descriptor는 Entry Latency(ENLAT), Exit Latency(EXLAT), Relative Read Throughput(RRT), Relative Read Latency(RRL), Relative Write Throughput(RWT), Relative Write Latency(RWL)을 보고해야 한다. RRT, RRL, RWT, RWL 값은 지원되는 전원 상태 수보다 작아야 한다.",
+     "keyword":"PSD ENLAT EXLAT RRT RRL RWT RWL descriptor","mandatory":"M"},
+    {"id":"REQ-PWR-PWR-005","level1":"PWR Power State Transition","level2":None,
+     "derived_from":"NVMe 2.2 §5.1.25.1.2","spec_section":"§5.1.25.1.2",
+     "spec_text":"If Active Power Workload is reported for a power state, the Active Power Scale (APS) shall also be reported for that power state.",
+     "spec_text_ko":"전원 상태에 대해 Active Power Workload가 보고되는 경우, 해당 전원 상태에 대한 Active Power Scale(APS)도 보고되어야 한다.",
+     "keyword":"Active Power Workload APS Scale report","mandatory":"M"},
+
+    # === APT Autonomous Power State Transition ===
+    {"id":"REQ-PWR-APT-001","level1":"APT Autonomous Power State Transition","level2":None,
+     "derived_from":"NVMe 2.2 §8.1.17.2","spec_section":"§8.1.17.2",
+     "spec_text":"If Autonomous Power State Transition Support (APTS) is indicated in Identify Controller, the controller shall support the Autonomous Power State Transition feature (Feature 0Ch).",
+     "spec_text_ko":"Identify Controller에서 Autonomous Power State Transition Support(APTS)가 표시되면, 컨트롤러는 Autonomous Power State Transition 기능(Feature 0Ch)을 지원해야 한다.",
+     "keyword":"APTS Autonomous Power State Transition Feature 0Ch","mandatory":"O"},
+    {"id":"REQ-PWR-APT-002","level1":"APT Autonomous Power State Transition","level2":None,
+     "derived_from":"NVMe 2.2 §8.1.17.2","spec_section":"§8.1.17.2",
+     "spec_text":"When APST is enabled and the controller has been idle for a continuous period exceeding the Idle Time Prior to Transition (ITPT) value for the current power state, the controller shall autonomously transition to the specified non-operational power state.",
+     "spec_text_ko":"APST가 활성화되고 컨트롤러가 현재 전원 상태의 Idle Time Prior to Transition(ITPT) 값을 초과하는 연속 기간 동안 유휴 상태인 경우, 컨트롤러는 지정된 비동작 전원 상태로 자율적으로 전환해야 한다.",
+     "keyword":"APST ITPT idle autonomous transition non-operational","mandatory":"O"},
+    {"id":"REQ-PWR-APT-003","level1":"APT Autonomous Power State Transition","level2":None,
+     "derived_from":"NVMe 2.2 §8.1.17.2","spec_section":"§8.1.17.2",
+     "spec_text":"An ITPT value of 0h shall disable autonomous transitions for the corresponding power state. The ITPS field shall specify a non-operational power state if ITPT is non-zero.",
+     "spec_text_ko":"ITPT 값이 0h이면 해당 전원 상태에 대한 자율 전환이 비활성화되어야 한다. ITPT가 0이 아닌 경우, ITPS 필드는 비동작 전원 상태를 지정해야 한다.",
+     "keyword":"ITPT 0h disable ITPS non-operational","mandatory":"O"},
+    {"id":"REQ-PWR-APT-004","level1":"APT Autonomous Power State Transition","level2":None,
+     "derived_from":"NVMe 2.2 §5.1.25.1.6","spec_section":"§5.1.25.1.6",
+     "spec_text":"The APSTE bit shall default to disabled (cleared to 0) on controller reset.",
+     "spec_text_ko":"APSTE 비트는 컨트롤러 리셋 시 비활성화(0으로 클리어)로 기본 설정되어야 한다.",
+     "keyword":"APSTE default disabled controller reset","mandatory":"O"},
+
+    # === NOP Non-Operational Power State ===
+    {"id":"REQ-PWR-NOP-001","level1":"NOP Non-Operational Power State","level2":None,
+     "derived_from":"NVMe 2.2 §8.1.17.1","spec_section":"§8.1.17.1",
+     "spec_text":"In a non-operational power state (NOPS bit set to '1'), the controller shall not process I/O commands. The controller shall support property accesses, Admin command processing, and transport-specific accesses while in a non-operational power state.",
+     "spec_text_ko":"비동작 전원 상태(NOPS 비트가 '1'로 설정)에서 컨트롤러는 I/O 명령을 처리해서는 안 된다. 컨트롤러는 비동작 전원 상태에서 속성 접근, Admin 명령 처리 및 전송 특정 접근을 지원해야 한다.",
+     "keyword":"NOPS non-operational no I/O Admin property access","mandatory":"M"},
+    {"id":"REQ-PWR-NOP-002","level1":"NOP Non-Operational Power State","level2":None,
+     "derived_from":"NVMe 2.2 §8.1.17.1","spec_section":"§8.1.17.1",
+     "spec_text":"When an I/O command is received while in a non-operational power state, the controller shall autonomously transition back to the most recent operational power state.",
+     "spec_text_ko":"비동작 전원 상태에서 I/O 명령이 수신되면, 컨트롤러는 가장 최근의 동작 전원 상태로 자율적으로 전환해야 한다.",
+     "keyword":"NOPS I/O command transition back operational","mandatory":"M"},
+    {"id":"REQ-PWR-NOP-003","level1":"NOP Non-Operational Power State","level2":None,
+     "derived_from":"NVMe 2.2 §5.1.25.1.10","spec_section":"§5.1.25.1.10",
+     "spec_text":"If Non-Operational Power State Permissive Mode is supported (NOPSPM in CTRATT) and NOPPME is set to '1', the controller may temporarily exceed the power limits of the non-operational state up to the limits of the last operational power state for controller-initiated background operations.",
+     "spec_text_ko":"Non-Operational Power State Permissive Mode가 지원되고(CTRATT의 NOPSPM) NOPPME가 '1'로 설정된 경우, 컨트롤러는 컨트롤러 개시 백그라운드 작업을 위해 비동작 상태의 전력 제한을 일시적으로 초과하여 마지막 동작 전원 상태의 제한까지 사용할 수 있다.",
+     "keyword":"NOPSPM NOPPME permissive mode background operations","mandatory":"O"},
+    {"id":"REQ-PWR-NOP-004","level1":"NOP Non-Operational Power State","level2":None,
+     "derived_from":"NVMe 2.2 §5.1.25.1.10","spec_section":"§5.1.25.1.10",
+     "spec_text":"When NOPPME is cleared to '0', the controller shall not exceed the power limits of the non-operational state for controller-initiated background operations.",
+     "spec_text_ko":"NOPPME가 '0'으로 클리어된 경우, 컨트롤러는 컨트롤러 개시 백그라운드 작업을 위해 비동작 상태의 전력 제한을 초과해서는 안 된다.",
+     "keyword":"NOPPME disabled power limit background operations","mandatory":"M"},
+
+    # === THM Thermal Management ===
+    {"id":"REQ-PWR-THM-001","level1":"THM Thermal Management","level2":None,
+     "derived_from":"NVMe 2.2 §5.1.25.1.9","spec_section":"§5.1.25.1.9",
+     "spec_text":"If Host Controlled Thermal Management Support (HCTMS) is indicated in Identify Controller, the controller shall support Set Features and Get Features with Feature Identifier 10h (Thermal Management Temperature).",
+     "spec_text_ko":"Identify Controller에서 Host Controlled Thermal Management Support(HCTMS)가 표시되면, 컨트롤러는 Feature Identifier 10h(Thermal Management Temperature)에 대한 Set Features 및 Get Features를 지원해야 한다.",
+     "keyword":"HCTMS Thermal Management Temperature Feature 10h","mandatory":"O"},
+    {"id":"REQ-PWR-THM-002","level1":"THM Thermal Management","level2":None,
+     "derived_from":"NVMe 2.2 §8.1.17.5","spec_section":"§8.1.17.5",
+     "spec_text":"When the Composite Temperature is greater than or equal to TMT2, the controller shall transition to lower active power states or perform vendor-specific thermal management regardless of performance impact (heavy throttling).",
+     "spec_text_ko":"Composite Temperature가 TMT2 이상이면, 컨트롤러는 성능 영향에 관계없이 더 낮은 활성 전원 상태로 전환하거나 벤더 고유 열 관리를 수행해야 한다(heavy throttling).",
+     "keyword":"TMT2 heavy throttle thermal management","mandatory":"O"},
+    {"id":"REQ-PWR-THM-003","level1":"THM Thermal Management","level2":None,
+     "derived_from":"NVMe 2.2 §5.1.25.1.9","spec_section":"§5.1.25.1.9",
+     "spec_text":"TMT1 and TMT2 values shall be within the range of MNTMT and MXTMT. If both TMT1 and TMT2 are non-zero, TMT2 shall be greater than TMT1.",
+     "spec_text_ko":"TMT1 및 TMT2 값은 MNTMT와 MXTMT 범위 내에 있어야 한다. TMT1과 TMT2가 모두 0이 아닌 경우, TMT2는 TMT1보다 커야 한다.",
+     "keyword":"TMT1 TMT2 MNTMT MXTMT range validation","mandatory":"O"},
+    {"id":"REQ-PWR-THM-004","level1":"THM Thermal Management","level2":None,
+     "derived_from":"NVMe 2.2 §5.1.25.1.3","spec_section":"§5.1.25.1.3",
+     "spec_text":"The over temperature threshold shall be implemented for the Composite Temperature. The under temperature threshold shall be implemented for the Composite Temperature if WCTEMP is non-zero. All implemented temperature sensors shall support over and under temperature thresholds.",
+     "spec_text_ko":"Composite Temperature에 대한 과열 임계값이 구현되어야 한다. WCTEMP가 0이 아닌 경우 Composite Temperature에 대한 저온 임계값이 구현되어야 한다. 구현된 모든 온도 센서는 과열 및 저온 임계값을 지원해야 한다.",
+     "keyword":"Temperature Threshold over under WCTEMP composite","mandatory":"M"},
+
+    # === KAL Keep Alive ===
+    {"id":"REQ-PWR-KAL-001","level1":"KAL Keep Alive","level2":None,
+     "derived_from":"NVMe 2.2 §5.1.14","spec_section":"§5.1.14",
+     "spec_text":"If the Keep Alive Support (KAS) field in Identify Controller is non-zero, the controller shall support the Keep Alive command.",
+     "spec_text_ko":"Identify Controller의 Keep Alive Support(KAS) 필드가 0이 아닌 경우, 컨트롤러는 Keep Alive 명령을 지원해야 한다.",
+     "keyword":"KAS Keep Alive Support command","mandatory":"O"},
+    {"id":"REQ-PWR-KAL-002","level1":"KAL Keep Alive","level2":None,
+     "derived_from":"NVMe 2.2 §3.9","spec_section":"§3.9",
+     "spec_text":"The Keep Alive Timer shall be restarted when a Keep Alive command completes successfully or when a Set Features command with Feature 0Fh and a non-zero KATO completes successfully.",
+     "spec_text_ko":"Keep Alive 명령이 성공적으로 완료되거나 Feature 0Fh와 0이 아닌 KATO를 가진 Set Features 명령이 성공적으로 완료되면 Keep Alive 타이머가 재시작되어야 한다.",
+     "keyword":"Keep Alive Timer restart KATO Feature 0Fh","mandatory":"O"},
+    {"id":"REQ-PWR-KAL-003","level1":"KAL Keep Alive","level2":None,
+     "derived_from":"NVMe 2.2 §3.9","spec_section":"§3.9",
+     "spec_text":"Upon Keep Alive timeout detection, the controller shall record an Error Information Log Entry with status code Keep Alive Timeout Expired, stop processing commands, and set Controller Fatal Status (CSTS.CFS) to '1'.",
+     "spec_text_ko":"Keep Alive 타임아웃 감지 시, 컨트롤러는 Keep Alive Timeout Expired 상태 코드로 Error Information 로그 항목을 기록하고, 명령 처리를 중단하며, Controller Fatal Status(CSTS.CFS)를 '1'로 설정해야 한다.",
+     "keyword":"Keep Alive timeout CFS fatal error log","mandatory":"M"},
+    {"id":"REQ-PWR-KAL-004","level1":"KAL Keep Alive","level2":None,
+     "derived_from":"NVMe 2.2 §3.9","spec_section":"§3.9",
+     "spec_text":"If the transport requires Keep Alive and the host attempts to clear KATO to 0h, the controller shall abort the command with a status code of Keep Alive Timeout Invalid.",
+     "spec_text_ko":"전송이 Keep Alive를 요구하고 호스트가 KATO를 0h로 클리어하려고 시도하면, 컨트롤러는 Keep Alive Timeout Invalid 상태 코드로 명령을 중단해야 한다.",
+     "keyword":"KATO 0h transport Keep Alive Timeout Invalid","mandatory":"M"},
+
+    # === PLS Power Loss Signal ===
+    {"id":"REQ-PWR-PLS-001","level1":"PLS Power Loss Signal","level2":None,
+     "derived_from":"NVMe 2.2 §8.1.17.4","spec_section":"§8.1.17.4",
+     "spec_text":"The RTD3 Resume Latency (RTD3R) and RTD3 Entry Latency (RTD3E) shall be reported in the Identify Controller data structure. RTD3R indicates the expected latency in microseconds to resume from Runtime D3.",
+     "spec_text_ko":"RTD3 Resume Latency(RTD3R) 및 RTD3 Entry Latency(RTD3E)는 Identify Controller 데이터 구조에 보고되어야 한다. RTD3R은 Runtime D3에서 재개하는 데 예상되는 지연 시간(마이크로초)을 나타낸다.",
+     "keyword":"RTD3R RTD3E Resume Entry Latency Identify Controller","mandatory":"M"},
+    {"id":"REQ-PWR-PLS-002","level1":"PLS Power Loss Signal","level2":None,
+     "derived_from":"NVMe 2.2 §8.2.5","spec_section":"§8.2.5",
+     "spec_text":"If Power Loss Signaling with Emergency Power Fail (PLSEPF) is supported, the controller shall support the emergency power fail signal. If Power Loss Signaling with Forced Quiescence (PLSFQ) is supported, the controller shall support the forced quiescence signal.",
+     "spec_text_ko":"Power Loss Signaling with Emergency Power Fail(PLSEPF)이 지원되는 경우, 컨트롤러는 긴급 전원 실패 신호를 지원해야 한다. Power Loss Signaling with Forced Quiescence(PLSFQ)이 지원되는 경우, 컨트롤러는 강제 정지 신호를 지원해야 한다.",
+     "keyword":"PLSEPF PLSFQ Power Loss Signaling Emergency Quiescence","mandatory":"O"},
+]
+
+for r in reqs:
+    r.setdefault("category","POWER")
+    r.setdefault("controller_type","BOTH")
+    c.execute("""INSERT OR IGNORE INTO requirement
+        (id,category,level1,level2,derived_from,spec_section,spec_text,spec_text_ko,
+         keyword,controller_type,mandatory,support_status,status,priority,created_at,updated_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+        (r["id"],r["category"],r["level1"],r["level2"],r["derived_from"],r["spec_section"],
+         r["spec_text"],r["spec_text_ko"],r["keyword"],r["controller_type"],r["mandatory"],
+         "UNKNOWN","OPEN","NORMAL",now,now))
+    print(f"  ADD: {r['id']}")
+c.commit(); c.close()
+print(f"\nImported {len(reqs)} POWER requirements.")

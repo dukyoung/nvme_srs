@@ -40,6 +40,7 @@ async def seed(csv_path: str):
                 id=req_id,
                 category=row.get("category", "").strip(),
                 level1=row.get("level1", "").strip(),
+                level2=row.get("level2", "").strip() or None,
                 derived_from=row.get("derived_from", "").strip() or None,
                 spec_section=row.get("spec_section", "").strip() or None,
                 spec_text=row.get("spec_text", "").strip(),

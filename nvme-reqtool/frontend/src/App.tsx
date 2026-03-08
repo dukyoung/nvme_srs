@@ -36,7 +36,7 @@ function AppContent() {
         </span>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-6 py-6">
+      <main className="px-6 py-6">
         <Routes>
           <Route path="/" element={<RequirementsPage editors={editors} sendWs={send} />} />
           <Route path="/testcases" element={<TestCasesPage />} />

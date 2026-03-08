@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import { useRequirements, useImportRequirements } from '../hooks/useRequirements'
 import { useFilterStore } from '../store/filterStore'
 import ReqTable from '../components/ReqTable'
@@ -13,16 +13,35 @@ interface Props {
 }
 
 export default function RequirementsPage({ editors, sendWs }: Props) {
-  const { category, supportStatus, assignedTo, keyword, derivedFrom, setCategory, setSupportStatus, setAssignedTo, setKeyword, setDerivedFrom } =
+  const { category, level1, level2, supportStatus, assignedTo, keyword, derivedFrom, setCategory, setLevel1, setLevel2, setSupportStatus, setAssignedTo, setKeyword, setDerivedFrom } =
     useFilterStore()
 
   const { data: requirements = [], isLoading } = useRequirements({
     category: category || undefined,
+    level1: level1 || undefined,
+    level2: level2 || undefined,
     support_status: supportStatus || undefined,
     assigned_to: assignedTo || undefined,
     keyword: keyword || undefined,
     derived_from: derivedFrom || undefined,
   })
+
+  // Build dynamic level1/level2 options from full dataset (unfiltered by level)
+  const { data: allReqs = [] } = useRequirements({
+    category: category || undefined,
+  })
+  const level1Options = useMemo(() => {
+    const set = new Set<string>()
+    allReqs.forEach((r) => { if (r.level1) set.add(r.level1) })
+    return Array.from(set).sort()
+  }, [allReqs])
+
+  const level2Options = useMemo(() => {
+    const set = new Set<string>()
+    const base = level1 ? allReqs.filter((r) => r.level1 === level1) : allReqs
+    base.forEach((r) => { if (r.level2) set.add(r.level2) })
+    return Array.from(set).sort()
+  }, [allReqs, level1])
 
   const importMut = useImportRequirements()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -76,6 +95,34 @@ export default function RequirementsPage({ editors, sendWs }: Props) {
             </option>
           ))}
         </select>
+
+        <select
+          className="border rounded px-2 py-1 text-sm"
+          value={level1}
+          onChange={(e) => setLevel1(e.target.value)}
+        >
+          <option value="">전체 Level1</option>
+          {level1Options.map((l) => (
+            <option key={l} value={l}>
+              {l}
+            </option>
+          ))}
+        </select>
+
+        {level2Options.length > 0 && (
+          <select
+            className="border rounded px-2 py-1 text-sm"
+            value={level2}
+            onChange={(e) => setLevel2(e.target.value)}
+          >
+            <option value="">전체 Level2</option>
+            {level2Options.map((l) => (
+              <option key={l} value={l}>
+                {l}
+              </option>
+            ))}
+          </select>
+        )}
 
         <select
           className="border rounded px-2 py-1 text-sm"

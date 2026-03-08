@@ -2,6 +2,7 @@ export interface Requirement {
   id: string
   category: string
   level1: string
+  level2: string | null
   derived_from: string | null
   spec_section: string | null
   spec_text: string
@@ -23,6 +24,7 @@ export interface Requirement {
 export interface RequirementUpdate {
   category?: string
   level1?: string
+  level2?: string
   derived_from?: string
   spec_section?: string
   spec_text?: string
@@ -90,16 +92,17 @@ export const SUPPORT_STATUS_OPTIONS = [
 ] as const
 
 export const CATEGORY_OPTIONS = [
-  { value: 'IDENT', label: '1. 식별 및 기능 협상' },
-  { value: 'QUEUE', label: '2. 큐 및 명령어 처리' },
-  { value: 'DATA_IO', label: '3. 데이터 입출력' },
-  { value: 'NS_MGMT', label: '4. 네임스페이스 관리' },
-  { value: 'MONITOR', label: '5. 상태 모니터링 및 로그' },
-  { value: 'POWER', label: '6. 전원 및 열 관리' },
-  { value: 'SECURITY', label: '7. 보안 및 데이터 삭제' },
-  { value: 'INTEGRITY', label: '8. 데이터 무결성 및 보호' },
-  { value: 'FW_MGMT', label: '9. 펌웨어 관리' },
-  { value: 'VIRT', label: '10. 가상화 및 리소스 관리' },
+  { value: 'IDENT', label: '1. Identification & Capability Negotiation' },
+  { value: 'QUEUE', label: '2. Queue & Command Management' },
+  { value: 'DATA_IO', label: '3. Data I/O' },
+  { value: 'NS_MGMT', label: '4. Namespace Management' },
+  { value: 'MONITOR', label: '5. Monitoring & Logging' },
+  { value: 'POWER', label: '6. Power & Thermal Management' },
+  { value: 'SECURITY', label: '7. Security & Sanitization' },
+  { value: 'INTEGRITY', label: '8. Data Integrity & Protection' },
+  { value: 'FW_MGMT', label: '9. Firmware Management' },
+  { value: 'VIRT', label: '10. Virtualization & Resource Management' },
+  { value: 'RESET', label: '11. Reset & Initialization' },
 ] as const
 
 export const CATEGORY_LABEL_MAP: Record<string, string> = Object.fromEntries(
